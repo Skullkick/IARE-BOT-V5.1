@@ -1,0 +1,30 @@
+{
+    "name": "IARE BOT",
+    "env": {
+      "API_ID": {
+        "description": "Add your telegram API_ID",
+        "value": ""
+      },
+      "API_HASH": {
+        "description": "Add your telegram API_HASH",
+        "value": ""
+      },
+      "DEVELOPER_CHAT_ID": {
+        "description": "Add your DEVELOPER_CHAT_ID",
+        "value": ""
+      },
+      "MAINTAINER_CHAT_ID": {
+        "description": "Add your DEVELOPER_CHAT_ID",
+        "value": ""
+      },
+      "BOT_TOKEN": {
+        "description": "Your bot token, as a string.",
+        "value": ""
+ }
+    },
+    "buildpacks": [
+      {
+        "url": "heroku/python"
+      }
+    ]
+ }
