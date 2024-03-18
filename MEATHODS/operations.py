@@ -272,6 +272,92 @@ async def attendance(bot,message):
         await bot.send_message(chat_id,"Attendance data not found.")
     await buttons.start_user_buttons(bot,message)
 #Biometric
+async def biometric(bot, message):
+    chat_id = message.chat.id
+    chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
+    session_data = await tdatabase.load_user_session(chat_id)
+    if not session_data:
+        if await auto_login_by_database(bot, message, chat_id) is False and not chat_id_in_pgdatabase:
+            await bot.send_message(chat_id, "Please log in using the /login command.")
+            return
+        else:
+            session_data = await tdatabase.load_user_session(chat_id)
+
+    biometric_url = 'https://samvidha.iare.ac.in/home?action=std_bio'
+    with requests.Session() as s:
+        cookies = session_data['cookies']
+        s.cookies.update(cookies)
+        headers = session_data['headers']
+        response = s.get(biometric_url, headers=headers)
+
+        # Parse the HTML content using BeautifulSoup
+        Biometric_html = BeautifulSoup(response.text, 'html.parser')
+
+    # Check if the response contains the expected title
+    if '<title>Samvidha - Campus Management Portal - IARE</title>' in response.text:
+        if chat_id_in_pgdatabase:
+            await silent_logout_user_if_logged_out(bot, chat_id)
+            await biometric(bot, message)
+        else:
+            await logout_user_if_logged_out(bot, chat_id)
+        return
+
+    # Find the table
+    biometric_table = Biometric_html.find('table', class_='table')
+
+    if not biometric_table:
+        await message.reply("Biometric data not found.")
+        return
+
+    # Dictionary to store attendance data for each student
+    attendance_data = {
+        'Total Days Present': 0,
+        'Total Days Absent': 0,
+        'Total Days': 0
+    }
+
+    # Find all rows in the table body except the last one
+    biometric_rows = biometric_table.find('tbody').find_all('tr')[:-1]
+
+    for row in biometric_rows:
+        # Extract data from each row
+        cells = row.find_all('td')
+        status = cells[6].text.strip()
+        if status.lower() == 'present':
+            attendance_data['Total Days Present'] += 1
+        else:
+            attendance_data['Total Days Absent'] += 1
+
+    attendance_data['Total Days'] = attendance_data['Total Days Present'] + attendance_data['Total Days Absent']
+    # Calculate the biometric percentage
+    biometric_percentage = (attendance_data['Total Days Present'] / attendance_data['Total Days']) * 100 if attendance_data['Total Days'] != 0 else 0
+    biometric_percentage = round(biometric_percentage, 3)
+
+    # Calculate the biometric percentage with six hours gap
+    six_percentage = await six_hours_biometric(biometric_rows, attendance_data['Total Days'])
+
+    biometric_msg = f"""
+    ```Biometric
+⫷
+
+● Total Days             -  {attendance_data['Total Days']}
+                    
+● Days Present           -  {attendance_data['Total Days Present']}  
+                
+● Days Absent            -  {attendance_data['Total Days Absent']}
+                    
+● Biometric %            -  {biometric_percentage}
+
+● Biometric % (6h gap)   -  {six_percentage}
+
+⫸
+
+@iare_unofficial_bot
+    ```
+    """
+    await bot.send_message(chat_id, biometric_msg)
+    
+    await buttons.start_user_buttons(bot,message)
 
 async def six_hours_biometric(biometric_rows, totaldays):
     intimes, outtimes = [], []
