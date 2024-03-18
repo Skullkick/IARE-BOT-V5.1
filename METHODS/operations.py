@@ -11,9 +11,9 @@ BOT_MAINTAINER_CHAT_ID_re = os.environ.get("MAINTAINER_CHAT_ID")
 
 
 
-BOT_DEVELOPER_CHAT_ID = 1767667538
+BOT_DEVELOPER_CHAT_ID = int(BOT_DEVELOPER_CHAT_ID_re)
 
-BOT_MAINTAINER_CHAT_ID = None
+BOT_MAINTAINER_CHAT_ID = int(BOT_MAINTAINER_CHAT_ID_re)
 
 async def get_indian_time():
     return datetime.now(timezone('Asia/Kolkata'))
