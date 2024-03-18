@@ -1,6 +1,6 @@
 from pyrogram.types import InlineKeyboardButton,InlineKeyboardMarkup
 from DATABASE import pgdatabase
-from MEATHODS import operations
+from METHODS import operations
 
 
 USER_MESSAGE = "Here are some actions you can perform."
