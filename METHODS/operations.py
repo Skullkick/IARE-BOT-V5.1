@@ -604,15 +604,7 @@ async def help_command(bot,message):
 
     /login username password - Log in with your credentials.
 
-    /attendance - View your attendance details.
-
-    /biometric - View your biometric details.
-
-    /bunk - View the number of classes you can bunk.
-
     /logout - Log out from the current session.
-
-    /del_save - Remove user credentials from the saved credentials.
 
     /request {your request} - Send a request to the bot devoloper.
 
@@ -621,30 +613,14 @@ async def help_command(bot,message):
     help_dmsg = """Available commands:
 
     /login {username} {password} - Log in with your credentials.
-
-    /attendance - View your attendance details.
-
-    /biometric - View your biometric details.
-
-    /bunk - View the number of classes you can bunk.
-
-    /logout - Log out from the current session.
-
-    /del_save - Remove user credentials from the saved credentials.
+    
+    /logout - Log out from the current session.    
     
     /request {your request} - Send a request to the bot Developer.
 
     /admin - get access to the authorized operations.
 
     /reply {your reply} - Send a reply to the request by replying to it.
-
-    /rshow - Show the requests.
-
-    /rclear - Clear the requests.
-
-    /lusers - Show the list of users.
-
-    /tusers - Show the total number of users
 
     /reset - Reset the Database
 
