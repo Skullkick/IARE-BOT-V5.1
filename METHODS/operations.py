@@ -562,7 +562,7 @@ async def reply_to_user(bot,message):
         await bot.send_message(chat_id=developer_chat_id, text=error_message)
 
 async def show_requests(bot,message):
-    chat_id = message.from_user.id
+    chat_id = message.chat.id
     requests = await tdatabase.load_allrequests()
     if message.chat.id != BOT_DEVELOPER_CHAT_ID and message.chat.id != BOT_MAINTAINER_CHAT_ID:
         return
