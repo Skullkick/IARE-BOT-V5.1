@@ -585,7 +585,8 @@ async def list_users(bot,chat_id):
         os.remove(qr_image_path)
 
 async def total_users(bot,message):
-    if message.from_user.id == BOT_DEVELOPER_CHAT_ID or message.chat.id==BOT_MAINTAINER_CHAT_ID:
+    chat_id = message.chat.id
+    if chat_id == BOT_DEVELOPER_CHAT_ID or chat_id ==BOT_MAINTAINER_CHAT_ID:
         total_count = await tdatabase.fetch_number_of_total_users_db()
         await bot.send_message(message.chat.id,f"Total users: {total_count}")
 
