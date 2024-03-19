@@ -130,6 +130,23 @@ async def remove_saved_credentials(bot,chat_id):
         
         await connection.close()
 
+async def clear_database():
+    # Connecting to the PSQL database
+    connection = await connect_pg_database()
+    try:
+        async with connection.transaction():
+            # Execute the SQL command to delete data
+            await connection.execute("DELETE FROM user_credentials")
+
+        print("Data erased successfully!")
+        return True
+    except Exception as e:
+        print(f"Error clearing database: {e}")
+        return False
+    finally:
+        # Close the database connection
+        await connection.close()
+
 async def total_users_pg_database(bot,chat_id):
     connection = await connect_pg_database()
     try:
