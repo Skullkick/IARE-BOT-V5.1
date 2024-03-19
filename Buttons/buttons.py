@@ -178,6 +178,7 @@ async def callback_function(bot,callback_query):
         POSTGRES_BUTTONS = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton("Total users",callback_data="pgtusers")],
+                [InlineKeyboardButton("Reset",callback_data="pg_reset")],
                 [InlineKeyboardButton("Back",callback_data="database")]
             ]
         )
@@ -190,6 +191,11 @@ async def callback_function(bot,callback_query):
         _message = callback_query.message
         chat_id = _message.chat.id
         await pgdatabase.total_users_pg_database(bot,chat_id)
+    elif callback_query.data == "pg_reset":
+        _message = callback_query.message
+        chat_id = _message.chat.id
+        await pgdatabase.clear_database()
+        await callback_query.answer()
 
 
 
