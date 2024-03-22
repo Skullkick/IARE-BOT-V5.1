@@ -185,7 +185,8 @@ async def auto_login_by_database(bot,message,chat_id):
         await bot.send_message(chat_id,text="Login successful!")
         return True
     else:
-        await bot.send_message(chat_id,text="Unable to login using saved credentials, please try updating your password")
+        if await pgdatabase.check_chat_id_in_pgb(chat_id) is True:
+            await bot.send_message(chat_id,text="Unable to login using saved credentials, please try updating your password")
 
 async def logout(bot,message):
     chat_id = message.chat.id
@@ -339,7 +340,7 @@ async def biometric(bot, message):
             
             ``` 
             """
-    
+            
             await bot.send_message(chat_id,login_message)
             return
         else:
