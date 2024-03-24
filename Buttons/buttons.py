@@ -127,7 +127,7 @@ async def callback_function(bot,callback_query):
             inline_keyboard=[
                 [InlineKeyboardButton("Total user (Past 24 hrs)", callback_data="total_users")],
                 [InlineKeyboardButton("List of users(QR)",callback_data="list_of_users")],
-                [InlineKeyboardButton("Total users)",callback_data="pgtusers")],
+                [InlineKeyboardButton("Total users",callback_data="pgtusers")],
                 [InlineKeyboardButton("Back",callback_data="back_to_admin_operations")],
             ]
         )
