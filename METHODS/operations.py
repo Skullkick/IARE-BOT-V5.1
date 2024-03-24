@@ -21,6 +21,7 @@ async def get_random_greeting(bot,message):
     """
     Get a random greeting based on the time and day.
     """
+    chat_id = message.chat.id
     indian_time = await get_indian_time()
     current_hour = indian_time.hour
     current_weekday = indian_time.weekday()
@@ -193,7 +194,18 @@ async def logout(bot,message):
     session_data = await tdatabase.load_user_session(chat_id)
 
     if not session_data or 'cookies' not in session_data or 'headers' not in session_data:
-        await bot.send_message(chat_id,text="Please log in using the /login command.")
+        login_message = f"""
+        ```NO USER FOUND
+        ⫸ How To Login:
+        
+        /login rollnumber password
+        
+        ⫸ Example:
+        
+        /login 22951A0000 iare_unoffical_bot
+        ```
+        """
+        await bot.send_message(chat_id,text=login_message)
         return
 
     logout_url = 'https://samvidha.iare.ac.in/logout'
@@ -583,7 +595,19 @@ async def request(bot,message):
     session_data = await tdatabase.load_user_session(chat_id)
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and await pgdatabase.check_chat_id_in_pgb(chat_id) is False:
-            await bot.send_message(chat_id,"Please log in using the /login command.")
+            # LOGIN MESSAGE
+            login_message = f"""
+            ```NO USER FOUND
+            ⫸ How To Login:
+            
+            /login rollnumber password
+            
+            ⫸ Example:
+            
+            /login 22951A0000 iare_unoffical_bot
+            ```
+            """
+            await bot.send_message(chat_id,login_message)
             return
         else:
             session_data = await tdatabase.load_user_session(chat_id)
