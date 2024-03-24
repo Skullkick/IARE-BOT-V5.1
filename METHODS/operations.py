@@ -21,6 +21,7 @@ async def get_random_greeting(bot,message):
     """
     Get a random greeting based on the time and day.
     """
+    chat_id = message.chat.id
     indian_time = await get_indian_time()
     current_hour = indian_time.hour
     current_weekday = indian_time.weekday()
@@ -50,12 +51,34 @@ async def get_random_greeting(bot,message):
 
     # Send the greeting to the user
     await message.reply(greeting)
-    await buttons.start_user_buttons(bot,message)
+
+    # Check if User Logged-In else,return LOGIN_MESSAGE
+
+    # LOGIN MESSAGE
+    login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+```
+"""
+    
+    if not await tdatabase.load_user_session(chat_id) and await pgdatabase.check_chat_id_in_pgb(chat_id) is False:
+        await bot.send_message(chat_id,login_message)
+        
+    else:
+        await buttons.start_user_buttons(bot,message)
+
 
 async def is_user_logged_in(bot,message):
     chat_id = message.chat.id
     if await tdatabase.load_user_session(chat_id):
         return True
+
 
 async def get_username(bot,message):
     user = await bot.get_users(message.from_user.id)
@@ -163,14 +186,42 @@ async def auto_login_by_database(bot,message,chat_id):
         await bot.send_message(chat_id,text="Login successful!")
         return True
     else:
-        await bot.send_message(chat_id,text="Unable to login using saved credentials, please try updating your password")
+        if await pgdatabase.check_chat_id_in_pgb(chat_id) is True:
+            await bot.send_message(chat_id,text="Unable to login using saved credentials, please try updating your password")
 
 async def logout(bot,message):
     chat_id = message.chat.id
     session_data = await tdatabase.load_user_session(chat_id)
 
     if not session_data or 'cookies' not in session_data or 'headers' not in session_data:
-        await bot.send_message(chat_id,text="Please log in using the /login command.")
+        login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+```
+        """
+        await bot.send_message(chat_id,text=login_message)
+        return
+
+    logout_url = 'https://samvidha.iare.ac.in/logout'
+    session_data = await tdatabase.load_user_session(chat_id)
+    cookies,headers = session_data['cookies'], session_data['headers']
+    requests.get(logout_url, cookies=cookies, headers=headers)
+    await tdatabase.delete_user_session(chat_id)
+
+    await message.reply("Logout successful.")
+
+async def logout_user_and_remove(bot,message):
+    chat_id = message.chat.id
+    session_data = await tdatabase.load_user_session(chat_id)
+
+    if not session_data or 'cookies' not in session_data or 'headers' not in session_data:
+        await bot.send_message(chat_id,text="You are already logged out.")
         return
 
     logout_url = 'https://samvidha.iare.ac.in/logout'
@@ -203,7 +254,22 @@ async def attendance(bot,message):
     session_data = await tdatabase.load_user_session(chat_id)
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
-            await bot.send_message(chat_id,"Please log in using the /login command.")
+            # LOGIN MESSAGE
+            
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+            
+            await bot.send_message(chat_id,login_message)
             return
         else:
             session_data = await tdatabase.load_user_session(chat_id)
@@ -232,6 +298,15 @@ async def attendance(bot,message):
         table_data = []
 
         rows = req_table.tbody.find_all('tr')
+        
+        # ATTENDANCE HEADING
+        
+        attendance_heading = f"""
+```ATTENDANCE
+@iare_unofficial_bot
+```
+"""
+        await bot.send_message(chat_id,attendance_heading)
 
         for row in rows:
             cells = row.find_all('td')
@@ -260,6 +335,7 @@ async def attendance(bot,message):
 ```
 """
                 # att_msg = f"Course: {course_name}, Attendance: {attendance_percentage}"
+                
                 sum_attendance += float(attendance_percentage)
                 if int(conducted) > 0:
                         count_att += 1
@@ -278,7 +354,22 @@ async def biometric(bot, message):
     session_data = await tdatabase.load_user_session(chat_id)
     if not session_data:
         if await auto_login_by_database(bot, message, chat_id) is False and not chat_id_in_pgdatabase:
-            await bot.send_message(chat_id, "Please log in using the /login command.")
+            # LOGIN MESSAGE
+            
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+            
+            await bot.send_message(chat_id,login_message)
             return
         else:
             session_data = await tdatabase.load_user_session(chat_id)
@@ -386,8 +477,24 @@ async def bunk(bot,message):
     chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
-            await bot.send_message(chat_id,"Please log in using the /login command.")
+            # LOGIN MESSAGE
+            
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+    
+            await bot.send_message(chat_id,login_message)
             return
+            
         else:
             session_data = await tdatabase.load_user_session(chat_id)
 
@@ -415,6 +522,16 @@ async def bunk(bot,message):
         req_table = table_all[1]
         table_data = []
         rows = req_table.tbody.find_all('tr')
+        
+        # BUNK HEADING
+    
+        bunk_heading = f"""
+```BUNK
+@iare_unofficial_bot
+```
+"""
+        await bot.send_message(chat_id,bunk_heading)
+        
         for row in rows:
             cells = row.find_all('td')
 
@@ -449,6 +566,7 @@ async def bunk(bot,message):
 
 ```
 """
+
 
                     await bot.send_message(chat_id,bunk_can_msg)
                   
@@ -493,7 +611,19 @@ async def request(bot,message):
     session_data = await tdatabase.load_user_session(chat_id)
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and await pgdatabase.check_chat_id_in_pgb(chat_id) is False:
-            await bot.send_message(chat_id,"Please log in using the /login command.")
+            # LOGIN MESSAGE
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+```
+"""
+            await bot.send_message(chat_id,login_message)
             return
         else:
             session_data = await tdatabase.load_user_session(chat_id)

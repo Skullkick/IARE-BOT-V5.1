@@ -93,7 +93,7 @@ async def callback_function(bot,callback_query):
         _message = callback_query.message
         chat_id = _message.chat.id
         await pgdatabase.remove_saved_credentials(bot,chat_id)
-        await operations.logout(bot,_message)
+        await operations.logout_user_and_remove(bot,_message)
         await callback_query.answer()
     elif callback_query.data == "requests":
         REQUESTS_TEXT = "Here are some operations that you can perform on requests."
@@ -127,6 +127,7 @@ async def callback_function(bot,callback_query):
             inline_keyboard=[
                 [InlineKeyboardButton("Total user (Past 24 hrs)", callback_data="total_users")],
                 [InlineKeyboardButton("List of users(QR)",callback_data="list_of_users")],
+                [InlineKeyboardButton("Total users",callback_data="pgtusers")],
                 [InlineKeyboardButton("Back",callback_data="back_to_admin_operations")],
             ]
         )
@@ -177,7 +178,6 @@ async def callback_function(bot,callback_query):
         POSTGRES_TEXT = "Here are few postgres operations."
         POSTGRES_BUTTONS = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton("Total users",callback_data="pgtusers")],
                 [InlineKeyboardButton("Reset",callback_data="pg_reset")],
                 [InlineKeyboardButton("Back",callback_data="database")]
             ]
