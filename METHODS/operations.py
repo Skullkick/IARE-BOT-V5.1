@@ -634,7 +634,7 @@ async def request(bot,message):
         return
     getuname = await tdatabase.load_username(chat_id)
 
-    username = getuname[3]
+    username = getuname[2]
 
     user_unique_id = await generate_unique_id()
 
