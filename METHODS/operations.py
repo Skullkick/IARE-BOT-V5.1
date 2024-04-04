@@ -606,6 +606,117 @@ async def generate_unique_id():
     """
     return str(uuid.uuid4())
 
+# CHECKS IF REGISTERED FOR PAT
+
+async def check_pat_student(bot,message):
+    chat_id = message.chat.id
+    session_data = await tdatabase.load_user_session(chat_id)
+    chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
+    if not session_data:
+        if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+
+            await bot.send_message(chat_id,login_message)
+            return
+        else:
+            session_data = await tdatabase.load_user_session(chat_id)
+    pat_attendance_url = "https://samvidha.iare.ac.in/home?action=Attendance_std"
+    with requests.Session() as s:
+        cookies = session_data['cookies']
+        s.cookies.update(cookies)
+
+        pat_attendance_response = s.get(pat_attendance_url)
+    data = BeautifulSoup(pat_attendance_response.text, 'html.parser')
+    td_tags = re.findall(r'<td\s*[^>]*>.*?</td>', str(data), flags=re.DOTALL)
+
+    # Count the number of <td> tags found
+    num_td_tags = len(td_tags)
+    # print("Number of <td> tags:", num_td_tags)
+
+    if(num_td_tags > 2):
+        return True
+    else:
+        return False
+
+
+
+# PAT ATTENDENCE IF REGISTERED
+
+async def pat_attendance(bot,message):
+    chat_id = message.chat.id
+    session_data = await tdatabase.load_user_session(chat_id)
+    chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
+    if not session_data:
+        if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+    
+            await bot.send_message(chat_id,login_message)
+            return
+        else:
+            session_data = await tdatabase.load_user_session(chat_id)
+    pat_attendance_url = "https://samvidha.iare.ac.in/home?action=Attendance_std"
+    with requests.Session() as s:
+        cookies = session_data['cookies']
+        s.cookies.update(cookies)
+
+        pat_attendance_response = s.get(pat_attendance_url)
+        pat_att_heading = f"""
+```PAT ATTENDANCE
+@iare_unofficial_bot
+```
+"""
+        await bot.send_message(chat_id,pat_att_heading)
+    data = BeautifulSoup(pat_attendance_response.text, 'html.parser')
+    tables = data.find_all('table')
+    for table in tables:
+        rows = table.find_all('tr')
+
+        for row in rows:
+            columns = row.find_all('td')
+            if len(columns) >= 7:
+                course_name = columns[2].text.strip()
+                conducted_classes = columns[3].text.strip()
+                attended_classes = columns[4].text.strip()  
+                attendance_percentage = columns[5].text.strip()
+                att_status = columns[6].text.strip()
+                att_msg = f"""
+```{course_name}
+
+● Conducted         -  {conducted_classes}
+             
+● Attended          -  {attended_classes}  
+         
+● Attendance %      -  {attendance_percentage} 
+            
+● Status            -  {att_status}  
+         
+```
+"""
+                await bot.send_message(chat_id,att_msg)
+    await buttons.start_user_buttons(bot,message)
+
 async def request(bot,message):
     chat_id = message.from_user.id
     session_data = await tdatabase.load_user_session(chat_id)

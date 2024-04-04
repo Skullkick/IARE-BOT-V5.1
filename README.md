@@ -49,6 +49,8 @@ Telegram Bot which scrapes the data from the [SAMVIDHA](https://samvidha.iare.ac
 ## Available Buttons for User:
 -    `Attendance` - View your attendance details.
 
+-    `PAT Attendance` - View your PAT attendance details.
+
 -    `Biometric` - View your biometric details.
 
 -    `Bunk` - View the number of classes you can bunk.
