@@ -1,7 +1,7 @@
 from DATABASE import tdatabase,pgdatabase
 from Buttons import buttons
 from bs4 import BeautifulSoup 
-import requests,json,uuid,os,pyqrcode,random
+import requests,json,uuid,os,pyqrcode,random,re
 from pytz import timezone
 from datetime import datetime
 
