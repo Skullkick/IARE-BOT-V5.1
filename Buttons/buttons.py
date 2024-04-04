@@ -38,7 +38,32 @@ async def start_admin_buttons(bot,message):
 async def callback_function(bot,callback_query):
     if callback_query.data == "attendance":
         _message = callback_query.message
-        await operations.attendance(bot,_message)
+        check_pat = await operations.check_pat_student(bot,_message)
+        if check_pat is True:
+            PAT_BUTTONS = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton("PAT Attendance",callback_data="pat_attendance")],
+                    [InlineKeyboardButton("Attendance",callback_data="attendance_in_pat_button")],
+                    [InlineKeyboardButton("Back",callback_data="user_back")]
+                ]
+            )
+            await callback_query.edit_message_text(
+            USER_MESSAGE,
+            reply_markup = PAT_BUTTONS
+            )
+        else:
+            await operations.attendance(bot,_message)    
+            await callback_query.answer()
+            await callback_query.message.delete()
+            
+    elif callback_query.data == "attendance_in_pat_button":
+        _message = callback_query.message
+        await operations.attendance(bot,_message)  
+        await callback_query.answer()  
+        await callback_query.message.delete()
+    elif callback_query.data == "pat_attendance":
+        _message = callback_query.message
+        await operations.pat_attendance(bot,_message)
         await callback_query.answer()
         await callback_query.message.delete()
     elif callback_query.data == "bunk":
