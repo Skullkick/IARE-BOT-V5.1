@@ -606,7 +606,52 @@ async def generate_unique_id():
     """
     return str(uuid.uuid4())
 
-# Check fill pat_student
+# CHECKS IF REGISTERED FOR PAT
+
+async def check_pat_student(bot,message):
+    chat_id = message.chat.id
+    session_data = await tdatabase.load_user_session(chat_id)
+    chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
+    if not session_data:
+        if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+
+            await bot.send_message(chat_id,login_message)
+            return
+        else:
+            session_data = await tdatabase.load_user_session(chat_id)
+    pat_attendance_url = "https://samvidha.iare.ac.in/home?action=Attendance_std"
+    with requests.Session() as s:
+        cookies = session_data['cookies']
+        s.cookies.update(cookies)
+
+        pat_attendance_response = s.get(pat_attendance_url)
+    data = BeautifulSoup(pat_attendance_response.text, 'html.parser')
+    td_tags = re.findall(r'<td\s*[^>]*>.*?</td>', str(data), flags=re.DOTALL)
+
+    # Count the number of <td> tags found
+    num_td_tags = len(td_tags)
+    # print("Number of <td> tags:", num_td_tags)
+
+    if(num_td_tags > 2):
+        return True
+    else:
+        return False
+
+
+
+# PAT ATTENDENCE IF REGISTERED
 
 async def pat_attendance(bot,message):
     chat_id = message.chat.id
