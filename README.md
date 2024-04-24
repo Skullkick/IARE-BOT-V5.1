@@ -60,7 +60,7 @@ Telegram Bot which scrapes the data from the [SAMVIDHA](https://samvidha.iare.ac
 -   `Saved Username` - Displays saved Username in Database and allows user to remove saved login or remove saved login and logout.
 
 ## Available Commands for Admin
-These commands are not accessable for a normal user, Only BOT_DEVElOPER and BOT_MAINTAINER can access these commands.
+These commands are not accessable for a normal user, Only BOT_DEVELOPER and BOT_MAINTAINER can access these commands.
 
 - '/reply {your reply}' - Send a reply to the request by replying to it.
 
