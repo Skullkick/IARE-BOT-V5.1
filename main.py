@@ -1,7 +1,7 @@
 from pyrogram import Client, filters
 import asyncio,os
 from DATABASE import tdatabase,pgdatabase
-from METHODS import operations
+from METHODS import labs_handler, operations
 from Buttons import buttons
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -43,7 +43,7 @@ async def _biometric(bot,message):
 async def _bunk(bot,message):
     await operations.bunk(bot,message)
     await buttons.start_user_buttons(bot,message)
-@bot.on_message(filters.command(commands=['request']))
+@bot.on_message(filters.command(commands=['report']))
 async def _request(bot,message):
     await operations.request(bot,message)
 @bot.on_message(filters.command(commands=['reply']))
@@ -83,15 +83,34 @@ async def admin_buttons(bot,message):
     if chat_id != BOT_DEVELOPER_CHAT_ID and chat_id != BOT_MAINTAINER_CHAT_ID:
         return
     await buttons.start_admin_buttons(bot,message)
+
+# @bot.on_message(filters.command(commands="deletepdf"))
+async def delete_pdf(bot,message):
+    chat_id = message.chat.id
+    if await labs_handler.remove_pdf_file(chat_id) is True:
+        await bot.send_message(chat_id,"Deleted Successfully")
+    else:
+        await bot.send_message(chat_id,"Failed")
+
+@bot.on_message(filters.private & filters.document)
+async def _download_pdf(bot,message):
+    await labs_handler.download_pdf(bot,message)
+
+@bot.on_message(filters.private & ~filters.service)
+async def _get_title_from_user(bot,message):
+    if message.text:
+        await labs_handler.get_title_from_user(bot,message)
+
 @bot.on_callback_query()
 async def _callback_function(bot,callback_query):
     await buttons.callback_function(bot,callback_query)
 
 
 async def main():
-    await tdatabase.create_tables()
+    await tdatabase.create_user_sessions_tables()
     await tdatabase.create_total_users_table()
     await tdatabase.create_requests_table()
+    await tdatabase.create_lab_upload_table()
     await pgdatabase.create_postgres_table()
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
