@@ -896,7 +896,7 @@ async def show_requests(bot,message):
         await bot.send_message(chat_id,text="There are no pending requests.")
         return
     for request in requests:
-        unique_id, user_id, message
+        unique_id, user_id, message, request_chat_id = request
         request_message = f"New User Request from user ID {user_id} (Unique ID: {unique_id}):\n\n{message}"
         await bot.send_message(chat_id, text=request_message)
 
