@@ -1,15 +1,13 @@
 from DATABASE import tdatabase,pgdatabase
 from Buttons import buttons
 from bs4 import BeautifulSoup 
-import requests,json,uuid,os,pyqrcode,random
+import requests,json,uuid,os,pyqrcode,random,re
 from pytz import timezone
 from datetime import datetime
 
 
 BOT_DEVELOPER_CHAT_ID_re = os.environ.get("DEVELOPER_CHAT_ID")
 BOT_MAINTAINER_CHAT_ID_re = os.environ.get("MAINTAINER_CHAT_ID")
-
-
 
 BOT_DEVELOPER_CHAT_ID = int(BOT_DEVELOPER_CHAT_ID_re)
 
@@ -21,6 +19,7 @@ async def get_random_greeting(bot,message):
     """
     Get a random greeting based on the time and day.
     """
+    chat_id = message.chat.id
     indian_time = await get_indian_time()
     current_hour = indian_time.hour
     current_weekday = indian_time.weekday()
@@ -50,12 +49,34 @@ async def get_random_greeting(bot,message):
 
     # Send the greeting to the user
     await message.reply(greeting)
-    await buttons.start_user_buttons(bot,message)
+
+    # Check if User Logged-In else,return LOGIN_MESSAGE
+
+    # LOGIN MESSAGE
+    login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+```
+"""
+    
+    if not await tdatabase.load_user_session(chat_id) and await pgdatabase.check_chat_id_in_pgb(chat_id) is False:
+        await bot.send_message(chat_id,login_message)
+        
+    else:
+        await buttons.start_user_buttons(bot,message)
+
 
 async def is_user_logged_in(bot,message):
     chat_id = message.chat.id
     if await tdatabase.load_user_session(chat_id):
         return True
+
 
 async def get_username(bot,message):
     user = await bot.get_users(message.from_user.id)
@@ -122,10 +143,22 @@ async def login(bot,message):
     if await tdatabase.load_user_session(chat_id):
         await message.reply("You are already logged in.")
         await buttons.start_user_buttons(bot,message)
+        await message.delete()
         return
 
     if len(command_args) != 2:
-        await message.reply("Invalid command format. Use /login {username} {password}.")
+        invalid_command_message =f"""
+```INVALID COMMAND USAGE
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+```
+        """
+        await message.reply(invalid_command_message)
         return
 
     username = command_args[0]
@@ -140,8 +173,7 @@ async def login(bot,message):
         if not await pgdatabase.check_chat_id_in_pgb(chat_id):
             save = await pgdatabase.save_credentials_to_databse(chat_id,username,password)
             if save is True:
-                await bot.send_message(chat_id,"Your login details have been successfully recorded")
-                await message.reply_text("Your password has been saved. If you don't want your password to be saved Click \"Remove\"",reply_markup =buttons.yes_no_keyboard)
+                await message.reply_text("Your password has been saved. If you don't want your password to be saved Click \"Remove\"",reply_markup =buttons.remove_cred_keyboard)
             else:
                 await bot.send_message(chat_id,"There is an error saving credentials.")
 
@@ -163,14 +195,43 @@ async def auto_login_by_database(bot,message,chat_id):
         await bot.send_message(chat_id,text="Login successful!")
         return True
     else:
-        await bot.send_message(chat_id,text="Unable to login using saved credentials, please try updating your password")
+        if await pgdatabase.check_chat_id_in_pgb(chat_id) is True:
+            await bot.send_message(chat_id,text="Unable to login using saved credentials, please try updating your password")
+        return False
 
 async def logout(bot,message):
     chat_id = message.chat.id
     session_data = await tdatabase.load_user_session(chat_id)
 
     if not session_data or 'cookies' not in session_data or 'headers' not in session_data:
-        await bot.send_message(chat_id,text="Please log in using the /login command.")
+        login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+```
+        """
+        await bot.send_message(chat_id,text=login_message)
+        return
+
+    logout_url = 'https://samvidha.iare.ac.in/logout'
+    session_data = await tdatabase.load_user_session(chat_id)
+    cookies,headers = session_data['cookies'], session_data['headers']
+    requests.get(logout_url, cookies=cookies, headers=headers)
+    await tdatabase.delete_user_session(chat_id)
+
+    await message.reply("Logout successful.")
+
+async def logout_user_and_remove(bot,message):
+    chat_id = message.chat.id
+    session_data = await tdatabase.load_user_session(chat_id)
+
+    if not session_data or 'cookies' not in session_data or 'headers' not in session_data:
+        await bot.send_message(chat_id,text="You are already logged out.")
         return
 
     logout_url = 'https://samvidha.iare.ac.in/logout'
@@ -203,10 +264,23 @@ async def attendance(bot,message):
     session_data = await tdatabase.load_user_session(chat_id)
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
-            await bot.send_message(chat_id,"Please log in using the /login command.")
+            # Login message if no user found in database based on chat_id
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+            
+            await bot.send_message(chat_id,login_message)
             return
-        else:
-            session_data = await tdatabase.load_user_session(chat_id)
+    session_data = await tdatabase.load_user_session(chat_id)
 
     # Access the attendance page and retrieve the content
     attendance_url = 'https://samvidha.iare.ac.in/home?action=stud_att_STD'
@@ -232,6 +306,15 @@ async def attendance(bot,message):
         table_data = []
 
         rows = req_table.tbody.find_all('tr')
+        
+        # ATTENDANCE HEADING
+        
+        attendance_heading = f"""
+```ATTENDANCE
+@iare_unofficial_bot
+```
+"""
+        await bot.send_message(chat_id,attendance_heading)
 
         for row in rows:
             cells = row.find_all('td')
@@ -260,6 +343,7 @@ async def attendance(bot,message):
 ```
 """
                 # att_msg = f"Course: {course_name}, Attendance: {attendance_percentage}"
+                
                 sum_attendance += float(attendance_percentage)
                 if int(conducted) > 0:
                         count_att += 1
@@ -278,10 +362,25 @@ async def biometric(bot, message):
     session_data = await tdatabase.load_user_session(chat_id)
     if not session_data:
         if await auto_login_by_database(bot, message, chat_id) is False and not chat_id_in_pgdatabase:
-            await bot.send_message(chat_id, "Please log in using the /login command.")
+            # LOGIN MESSAGE
+            
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+            
+            await bot.send_message(chat_id,login_message)
             return
-        else:
-            session_data = await tdatabase.load_user_session(chat_id)
+
+    session_data = await tdatabase.load_user_session(chat_id)
 
     biometric_url = 'https://samvidha.iare.ac.in/home?action=std_bio'
     with requests.Session() as s:
@@ -386,10 +485,25 @@ async def bunk(bot,message):
     chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
-            await bot.send_message(chat_id,"Please log in using the /login command.")
+            # LOGIN MESSAGE
+            
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+    
+            await bot.send_message(chat_id,login_message)
             return
-        else:
-            session_data = await tdatabase.load_user_session(chat_id)
+
+    session_data = await tdatabase.load_user_session(chat_id)
 
     attendance_url = 'https://samvidha.iare.ac.in/home?action=stud_att_STD'
     
@@ -415,6 +529,16 @@ async def bunk(bot,message):
         req_table = table_all[1]
         table_data = []
         rows = req_table.tbody.find_all('tr')
+        
+        # BUNK HEADING
+    
+        bunk_heading = f"""
+```BUNK
+@iare_unofficial_bot
+```
+"""
+        await bot.send_message(chat_id,bunk_heading)
+        
         for row in rows:
             cells = row.find_all('td')
 
@@ -449,6 +573,7 @@ async def bunk(bot,message):
 
 ```
 """
+
 
                     await bot.send_message(chat_id,bunk_can_msg)
                   
@@ -488,32 +613,149 @@ async def generate_unique_id():
     """
     return str(uuid.uuid4())
 
+# CHECKS IF REGISTERED FOR PAT
+
+async def check_pat_student(bot,message):
+    chat_id = message.chat.id
+    session_data = await tdatabase.load_user_session(chat_id)
+    chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
+    if not session_data:
+        if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
+            return
+    session_data = await tdatabase.load_user_session(chat_id)
+    pat_attendance_url = "https://samvidha.iare.ac.in/home?action=Attendance_std"
+    with requests.Session() as s:
+        cookies = session_data['cookies']
+        s.cookies.update(cookies)
+
+        pat_attendance_response = s.get(pat_attendance_url)
+    data = BeautifulSoup(pat_attendance_response.text, 'html.parser')
+    td_tags = re.findall(r'<td\s*[^>]*>.*?</td>', str(data), flags=re.DOTALL)
+
+    # Count the number of <td> tags found
+    num_td_tags = len(td_tags)
+    # print("Number of <td> tags:", num_td_tags)
+
+    if(num_td_tags > 2):
+        return True
+    else:
+        return False
+
+
+
+# PAT ATTENDENCE IF REGISTERED
+
+async def pat_attendance(bot,message):
+    chat_id = message.chat.id
+    session_data = await tdatabase.load_user_session(chat_id)
+    chat_id_in_pgdatabase = await pgdatabase.check_chat_id_in_pgb(chat_id)
+    if not session_data:
+        if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+    
+            await bot.send_message(chat_id,login_message)
+            return
+    session_data = await tdatabase.load_user_session(chat_id)
+    pat_attendance_url = "https://samvidha.iare.ac.in/home?action=Attendance_std"
+    with requests.Session() as s:
+        cookies = session_data['cookies']
+        s.cookies.update(cookies)
+
+        pat_attendance_response = s.get(pat_attendance_url)
+        pat_att_heading = f"""
+```PAT ATTENDANCE
+@iare_unofficial_bot
+```
+"""
+        await bot.send_message(chat_id,pat_att_heading)
+    data = BeautifulSoup(pat_attendance_response.text, 'html.parser')
+    tables = data.find_all('table')
+    for table in tables:
+        rows = table.find_all('tr')
+
+        for row in rows:
+            columns = row.find_all('td')
+            if len(columns) >= 7:
+                course_name = columns[2].text.strip()
+                conducted_classes = columns[3].text.strip()
+                attended_classes = columns[4].text.strip()  
+                attendance_percentage = columns[5].text.strip()
+                att_status = columns[6].text.strip()
+                att_msg = f"""
+```{course_name}
+
+● Conducted         -  {conducted_classes}
+             
+● Attended          -  {attended_classes}  
+         
+● Attendance %      -  {attendance_percentage} 
+            
+● Status            -  {att_status}  
+         
+```
+"""
+                await bot.send_message(chat_id,att_msg)
+    await buttons.start_user_buttons(bot,message)
+
 async def request(bot,message):
     chat_id = message.from_user.id
     session_data = await tdatabase.load_user_session(chat_id)
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and await pgdatabase.check_chat_id_in_pgb(chat_id) is False:
-            await bot.send_message(chat_id,"Please log in using the /login command.")
+            # LOGIN MESSAGE
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+```
+"""
+            await bot.send_message(chat_id,login_message)
             return
         else:
             session_data = await tdatabase.load_user_session(chat_id)
 
     user_request = " ".join(message.text.split()[1:])
     if not user_request:
-        await message.reply("Request cannot be empty.")
+        no_request_message = f"""
+```EMPTY MESSAGE
+⫸ ERROR : MESSAGE CANNOT BE EMPTY
+
+⫸ How to use command:
+
+●  /report We are encountering issues with the attendance feature.
+It seems that attendance records are not updating correctly after submitting.
+```
+"""
+        await message.reply(no_request_message)
         return
     getuname = await tdatabase.load_username(chat_id)
 
-    username = getuname[3]
+    username = getuname[2]
 
     user_unique_id = await generate_unique_id()
 
     await tdatabase.store_requests(user_unique_id,username,user_request,chat_id)
 
-    forwarded_message = f"New User Request from @{username} (ID: {user_unique_id}):\n\n{user_request}"
+    forwarded_message = f"New User Report from @{username} (ID: {user_unique_id}):\n\n{user_request}"
     await bot.send_message(BOT_DEVELOPER_CHAT_ID,text=forwarded_message)
 
-    await bot.send_message(chat_id,"Thank you for your request! Your message has been forwarded to the developer.")
+    await bot.send_message(chat_id,"Thank you for your report! Your message has been forwarded to the developer.")
 
 async def reply_to_user(bot,message):
 
@@ -521,7 +763,7 @@ async def reply_to_user(bot,message):
         return
 
     if not message.reply_to_message:
-        await message.reply("Please reply to a user's request to send a reply.")
+        await message.reply("Please reply to a user's report to send a reply.")
         return
 
 
@@ -561,8 +803,92 @@ async def reply_to_user(bot,message):
         error_message = f"An error occurred while sending the message to the user: {e}"
         await bot.send_message(chat_id=developer_chat_id, text=error_message)
 
+async def announcement_to_all_users(bot, message):
+    """This function is used to announce a message to all the users that are present in the 
+    Postgres database, this can only be used by BOT_DEVELOPER or BOT_MAINTAINER"""
+    # Only allow execution by specified chat IDs
+    if message.chat.id != BOT_DEVELOPER_CHAT_ID and message.chat.id != BOT_MAINTAINER_CHAT_ID:
+        return
+    chat_id = message.chat.id
+    # Retrieve all chat IDs from database
+    chat_ids = await pgdatabase.get_all_chat_ids()
+    
+    # Get the announcement message from the input message
+    developer_announcement = message.text.split("/announce", 1)[1].strip()
+    
+    # Validate announcement message
+    if not developer_announcement:
+        await bot.send_message(BOT_DEVELOPER_CHAT_ID, "Announcement cannot be empty.")
+        return
+    announcement_message = f"""
+```ANNOUNCEMENT
+{developer_announcement}
+```
+"""
+    # Track successful sends
+    successful_sends = 0
+    announcement_status_dev = f"""
+```ANNOUNCEMENT
+● STATUS : Started sending.
+```
+""" 
+    message_to_developer = await bot.send_message(chat_id,announcement_status_dev)
+    # Iterate over each chat ID and send the announcement message and documents
+    for chat_id in chat_ids:
+        try:
+            await bot.send_message(chat_id, announcement_message)
+            successful_sends += 1
+        except Exception as e:
+            await bot.send_message(BOT_DEVELOPER_CHAT_ID, f"Error sending message to chat ID {chat_id}: {e}")
+    
+    # Calculate success percentage
+    total_attempts = len(chat_ids)
+    success_percentage = (successful_sends / total_attempts) * 100 if total_attempts > 0 else 0.0
+    announcement_status_dev = f"""
+```ANNOUNCEMENT
+● STATUS : SENT
+
+● SUCCESS % : {success_percentage}
+
+```
+""" 
+    # Send success percentage message
+    await bot.edit_message_text(BOT_DEVELOPER_CHAT_ID,message_to_developer.id, announcement_status_dev)
+
+
+# This Function can be used to send the Announcement file in future.
+# async def download_announcement_file(bot,message):
+#     if message.chat.id != BOT_DEVELOPER_CHAT_ID and message.chat.id != BOT_MAINTAINER_CHAT_ID:
+#         return
+#     download_document_directory = "Announcements"
+#     chat_id  = message.chat.id
+#     if message.document or message.video:
+#         try:
+#             if not os.path.exists(download_document_directory):
+#                 os.makedirs(download_document_directory)
+#             started_receiving_document_text = f"""
+#     ```DOC STATUS
+#     ● Status : Receiving
+#     ```
+#     """
+#             message_before_recieving = await bot.send_message(chat_id,started_receiving_document_text)
+#             file_name_ = message.document.file_name
+#             await message.download(
+#                         file_name=os.path.join(download_document_directory, file_name_),
+#                     )
+#             received_document_text = f"""
+#     ```DOC STATUS
+#     ● Status : Received
+
+#     ● Filename : {file_name_}
+#     ```
+#     """
+#             await bot.edit_message_text(chat_id,message_before_recieving.id,received_document_text)
+#         except Exception as e:
+#             await bot.send_message(chat_id,f"Error receiving file : {e}")
+
 async def show_requests(bot,message):
-    chat_id = message.from_user.id
+    chat_id = message.chat.id
     requests = await tdatabase.load_allrequests()
     if message.chat.id != BOT_DEVELOPER_CHAT_ID and message.chat.id != BOT_MAINTAINER_CHAT_ID:
         return
@@ -570,7 +896,7 @@ async def show_requests(bot,message):
         await bot.send_message(chat_id,text="There are no pending requests.")
         return
     for request in requests:
-        unique_id, user_id, message, chat_id = request
+        unique_id, user_id, message
         request_message = f"New User Request from user ID {user_id} (Unique ID: {unique_id}):\n\n{message}"
         await bot.send_message(chat_id, text=request_message)
 
@@ -584,8 +910,20 @@ async def list_users(bot,chat_id):
         await bot.send_photo(chat_id, photo=open(qr_image_path, 'rb'))
         os.remove(qr_image_path)
 
+async def get_logs(bot,chat_id):
+    if chat_id == BOT_DEVELOPER_CHAT_ID or chat_id == BOT_MAINTAINER_CHAT_ID:
+        log_file_name = "logs.log"
+        if log_file_name in os.listdir():
+            try:
+                await bot.send_document(chat_id,log_file_name)
+            except Exception as e:
+                await bot.send_message(chat_id,f"Error: {e}")
+        else:
+            await bot.send_message(chat_id,"No log file found.")
+
 async def total_users(bot,message):
-    if message.from_user.id == BOT_DEVELOPER_CHAT_ID or message.chat.id==BOT_MAINTAINER_CHAT_ID:
+    chat_id = message.chat.id
+    if chat_id == BOT_DEVELOPER_CHAT_ID or chat_id ==BOT_MAINTAINER_CHAT_ID:
         total_count = await tdatabase.fetch_number_of_total_users_db()
         await bot.send_message(message.chat.id,f"Total users: {total_count}")
 
@@ -606,7 +944,7 @@ async def help_command(bot,message):
 
     /logout - Log out from the current session.
 
-    /request {your request} - Send a request to the bot devoloper.
+    /report {your report} - Send a report to the bot devoloper.
 
     Note: Replace {username}, {password}, and {your request} with actual values.
     """
@@ -616,7 +954,7 @@ async def help_command(bot,message):
     
     /logout - Log out from the current session.    
     
-    /request {your request} - Send a request to the bot Developer.
+    /report {your report} - Send a report to the bot devoloper.
 
     /admin - get access to the authorized operations.
 
@@ -631,7 +969,7 @@ async def help_command(bot,message):
         await buttons.start_user_buttons(bot,message)
     else:
         await bot.send_message(chat_id,text=help_msg)
-        if is_user_logged_in(chat_id,message) is True or await pgdatabase.check_chat_id_in_pgb(chat_id):
+        if await is_user_logged_in(chat_id,message) is True or await pgdatabase.check_chat_id_in_pgb(chat_id):
             await buttons.start_user_buttons(bot,message)
 
 async def reset_database(bot,message):
