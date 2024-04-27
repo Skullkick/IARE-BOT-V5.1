@@ -944,7 +944,7 @@ async def help_command(bot,message):
 
     /logout - Log out from the current session.
 
-    /report {your report} - Send a report to the bot devoloper.
+    /report {your report} - Send a report to the bot developer.
 
     Note: Replace {username}, {password}, and {your request} with actual values.
     """
@@ -954,7 +954,7 @@ async def help_command(bot,message):
     
     /logout - Log out from the current session.    
     
-    /report {your report} - Send a report to the bot devoloper.
+    /report {your report} - Send a report to the bot developer.
 
     /admin - get access to the authorized operations.
 
