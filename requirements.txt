@@ -8,3 +8,5 @@ PyQRCode==1.2.1
 pyrogram==2.0.106
 tgcrypto==1.2.5
 asyncpg==0.29.0
+selenium==4.19.0
+webdriver_manager==4.0.1
