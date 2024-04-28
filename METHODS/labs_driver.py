@@ -389,6 +389,8 @@ class HeadlessLabUpload:
         The function lists all the labs available to show uploads for. This lab selects from
         the element bearing the ID "ddlsub_code" rather than the table from below.
         :return: A list containing all the labs, empty in-case of error to acquire them.
+
+        It is using the new WebDriverWait
         """
         # Getting Lab Upload URL
         labs_attempts = 0
@@ -421,4 +423,55 @@ class HeadlessLabUpload:
         logging.info(msg=f"Failed To Acquire Labs For {self.username}. Quitting Driver.")
         self.driver.quit()
         return []
+
+    def select_and_click(self, lab: int) -> bool:
+        """
+        The function selects the lab according to the index sent,
+        clicks on the submit button.
+        :param lab: Lab index for selecting. Must be select based on 1-Indexing.
+        :return: True, if select was successful. Else, False.
+
+        It is using the new WebDriverWait.
+        """
+        click_attempts = 0
+        while click_attempts < 5:
+            try:
+                # Waiting For The Lab Select Element.
+                lab_select_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "ddlsub_code"))
+                )
+
+                # Selecting A Lab Using Select Object.
+                lab_select = Select(lab_select_element)
+                lab_select.select_by_index(lab)
+
+                # Waiting For Show Submitted Button.
+                show_submitted_button = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "search"))
+                )
+
+                # Clicking On The Show Submitted Button.
+                show_submitted_button.click()
+                time.sleep(2.5)
+
+                logging.info(msg=f"Successfully Executed Select And Click For {self.username}.")
+                return True
+
+            except selenium.common.TimeoutException:
+                logging.info(
+                    msg=f"Could Not Select And Click For {self.username}. Attempts Remaining: {5 - click_attempts}."
+                )
+                click_attempts += 1
+
+            except Exception as SelectAndClickError:
+                logging.info(
+                    msg=f"""
+                    Could Not Select And Click For {self.username}, Due To {SelectAndClickError}
+                     Attempts Remaining: {5 - click_attempts}."""
+                )
+                click_attempts += 1
+
+        logging.info(f"Finally, Could Not Select And Click For {self.username}. Quitting Driver.")
+        self.driver.quit()
+        return False
 
