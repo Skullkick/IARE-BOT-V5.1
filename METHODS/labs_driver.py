@@ -1,5 +1,7 @@
 import logging
 import time
+import os
+import json
 
 import selenium.common
 from webdriver_manager.chrome import ChromeDriverManager as ChromeDriver
@@ -11,6 +13,11 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ExpecCond
+
+from Buttons import buttons
+from DATABASE import pgdatabase
+from DATABASE import tdatabase
+from METHODS import labs_handler
 
 from bs4 import BeautifulSoup
 
