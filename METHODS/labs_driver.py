@@ -381,3 +381,44 @@ class HeadlessLabUpload:
         logging.info(f"Log-Out Failed For {self.username}. Quitting Driver.")
         self.driver.quit()
         return False
+    
+
+# Features Related To ViewUploads.
+    def lists_labs(self) -> list[str]:
+        """
+        The function lists all the labs available to show uploads for. This lab selects from
+        the element bearing the ID "ddlsub_code" rather than the table from below.
+        :return: A list containing all the labs, empty in-case of error to acquire them.
+        """
+        # Getting Lab Upload URL
+        labs_attempts = 0
+        while labs_attempts < 5:
+            try:
+                # Waiting For The Lab Select Element.
+                lab_select_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "ddlsub_code"))
+                )
+
+                # Extracting All The Options.
+                lab_select = Select(lab_select_element)
+                labs = [opt.text for opt in lab_select.options]
+                if labs:
+                    logging.info(msg=f"Labs Found For {self.username}.")
+                    return labs[1:]
+
+            except selenium.common.TimeoutException:
+                labs_attempts += 1
+                logging.info(msg=f"Labs Not Found For {self.username}. Attempts Remaining: {5 - labs_attempts}")
+
+            except Exception as LabsError:
+                labs_attempts += 1
+                logging.info(
+                    msg=f"""
+                    Labs Not Found For {self.username}, Due To {LabsError}. Attempts Remaining: {5 - labs_attempts}.
+                    """
+                )
+
+        logging.info(msg=f"Failed To Acquire Labs For {self.username}. Quitting Driver.")
+        self.driver.quit()
+        return []
+
