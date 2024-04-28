@@ -126,7 +126,7 @@ class HeadlessLabUpload:
         """
         This is a simple function that tries 5 times to find lab_upload URL.
         This function can be called only if login_to_samvidha() is successful.
-        
+
         :return: URL: str, that can be used to get to the lab upload page for that user.
         """
         lab_attempts = 0
@@ -153,3 +153,59 @@ class HeadlessLabUpload:
         # Quitting Driver For Failure To Find Lab Upload URL.
         logging.info(msg=f"Could Not Find Lab Upload URL For {self.username}. Attempts Expired. Quitting Driver.")
         self.driver.quit()
+
+    def labs_and_weeks(self,lab_upload_url: str):
+        """
+        The function finds all the available labs, and weeks to upload to.
+        This function can only be called if login_to_samvidha() returns True.
+
+        It is utilizing the new WebDriverWait.
+
+        :param lab_upload_url: The URL obtained by calling find_lab_upload_url().
+
+        :return: A dictionary, with keys "labs" and "weeks" and values as lists of strings. If the dictionary is empty, the driver will quit.
+        """
+        self.driver.get(lab_upload_url)
+        labs_and_weeks = dict()
+
+        labs_available_attempts = 0
+        while labs_available_attempts < 5:
+            try:
+                # Waiting For The Lab Select Element.
+                lab_select_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "sub_code"))
+                )
+
+                # Creating Select Object For Labs.
+                lab_select = Select(lab_select_element)
+                labs = [opt.text for opt in lab_select.options]
+                labs_and_weeks["labs"] = labs[1:]
+
+                # Waiting For Weeks Element.
+                weeks_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "week_no"))
+                )
+
+                # Creating Select Object For Weeks.
+                week_select = Select(weeks_element)
+                weeks = [opt.text for opt in week_select.options]
+                labs_and_weeks["weeks"] = weeks
+
+                logging.info(f"Labs And Weeks Succcessfully Found For {self.username}.")
+                return labs_and_weeks
+
+            except selenium.common.TimeoutException:
+                labs_available_attempts += 1
+                logging.info(
+                    f"Could Not Find Labs And Weeks For {self.username}. Attempts Remaining: {labs_available_attempts}")
+
+            except Exception as LabAndWeekException:
+                labs_available_attempts += 1
+                logging.info(
+                    f"Could Not Find Labs And Weeks For {self.username}. Due To {LabAndWeekException}. Attempts Remaining: {labs_available_attempts}"
+                )
+
+        logging.info(f"Could Not Find Labs And Weeks For {self.username}. Quitting Session.")
+        self.driver.quit()
+        return labs_and_weeks
+
