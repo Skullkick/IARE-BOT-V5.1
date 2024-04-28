@@ -216,6 +216,8 @@ class HeadlessLabUpload:
         :param lab_index: The index for the lab according to the
         :param week_index:
         :return: str, the deadline for the given lab and week. Empty string in case of errors.
+
+        It is utilizing the new WebDriverWait.
         """
         
         self.driver.get("https://samvidha.iare.ac.in/home?action=labrecord_std")
@@ -269,3 +271,91 @@ class HeadlessLabUpload:
         logging.info(f"Could Not Find Date For {self.username}. Quitting Driver.")
         return date
 
+    def upload_pdf(self, url: str, title: str, filepath: str, week_index: int, lab_index: int) -> tuple:
+        """
+        This is the final function that uploads the pdf, to the given week_index week, in lab_index lab as title.
+
+        :param title: The title that the user wants to pass for their upload.
+        :param filepath: This is the user's file in pdfs/
+        :param week_index: This is the index with respect to "labs" from labs_and_weeks().
+        :param lab_index: This is the index with respect to "weeks" from labs_and_weeks().
+
+        :return: A tuple containing 3 things, a status code, a status message, and samvidha related details in that order.
+
+        This function will not be containing WebDriverWait, As It Is Misbehaving.
+        """
+        self.driver.get(url)
+        lab_upload_attempts = 0
+        while lab_upload_attempts < 5:
+            try:
+                # Finding Select Elements.
+                lab_element = self.driver.find_element(by=By.ID, value="sub_code")
+                week_element = self.driver.find_element(by=By.ID, value="week_no")
+
+                # Creating Select Objects
+                lab_select = Select(lab_element)
+                week_select = Select(week_element)
+
+                # Passing Keys To The Elements.
+                lab_select.select_by_index(lab_index)
+                time.sleep(1)
+                week_select.select_by_index(week_index)
+                time.sleep(1)
+
+                # Passing Title.
+                title_element = self.driver.find_element(by=By.ID, value="exp_title")
+                title_element.send_keys(title)
+                time.sleep(1)
+
+                # Passing Lab File.
+                lab_file_element = self.driver.find_element(By.ID, value="prog_doc")
+                lab_file_element.send_keys(filepath)
+                time.sleep(1)
+
+                # Clicking Submit Button.
+                submit_button = self.driver.find_element(by=By.ID, value="LAB_OK")
+                submit_button.click()
+                time.sleep(2.5)
+
+                # Finding Status Elements.
+                status_element = self.driver.find_element(by=By.ID, value="swal2-title")
+
+                if "success" in status_element.text.lower():
+                    logging.info(f"The Lab File Was Uploaded Successfully For {self.username}.")
+                    return 200, "Successful Upload", ""
+                elif "date not found" in status_element.text.lower():
+                    logging.info(f"The Upload For {self.username} Was Assigned No Date.")
+                    return 400, "Date Not Assigned", f"{status_element.text}"
+                elif "pdf" in status_element.text.lower():
+                    logging.info(f"The Uploaded File Was Not A PDF For {self.username}.")
+                    return 401, "Not A PDF File", f"{status_element.text}"
+                elif "duplicate" in status_element.text.lower():
+                    logging.info(f"Duplicate Record Was Uploaded By {self.username}.")
+                    return 402, "Duplicate Lab Record", f"{status_element.text}"
+                else:
+                    logging.info(f"The Lab Upload Has Exceeded Deadline For {self.username}.")
+                    return 403, "Uploaded Date Exceeded", f"{status_element.text}"
+
+            except selenium.common.NoSuchElementException or selenium.common.ElementNotSelectableException:
+                lab_upload_attempts += 1
+                logging.info(
+                    msg=f"Internal Samvidha Loading Error For {self.username}, {lab_upload_attempts} Time. Trying Again.")
+
+            except selenium.common.exceptions.ElementClickInterceptedException:
+                logging.info(f"The File Is Above 1MB For {self.username}. Quitting Driver.")
+                self.driver.quit()
+                return 404, "File Size Greater Than 1MB", ""
+            except selenium.common.InvalidArgumentException:
+                logging.info(msg=f"The Lab Path Or Name Is Not Correct For {self.username}")
+                self.driver.quit()
+                return 405, "Filepath Was Not Set Correctly", ""
+            except Exception as LabUploadError:
+                logging.info(msg=f"The Upload Failed For {self.username}, Due To {LabUploadError}. Quitting Driver.")
+                self.driver.quit()
+                return 201, "Unsuccessful Upload", f"{LabUploadError}"
+                
+        logging.info(
+            msg=f"Failed To Upload PDF For {self.username}, As Attempts Expired."
+        )
+        self.driver.quit()
+        return 201, "Unsuccessful Upload", ""
