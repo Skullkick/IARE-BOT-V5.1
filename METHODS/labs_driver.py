@@ -359,3 +359,25 @@ class HeadlessLabUpload:
         )
         self.driver.quit()
         return 201, "Unsuccessful Upload", ""
+    
+    def logout_from_samvidha(self):
+        """
+        This is the function that must be called at the end of any operation. The function logs
+        out from samvidha.
+        :return: True, for successful log-out, else, False.
+        """
+
+        logout_attempts = 0
+        while logout_attempts < 5:
+            try:
+                # Simply Getting Log-Out URL.
+                self.driver.get("https://samvidha.iare.ac.in/logout")
+                logging.info(f"Log-Out Successful For {self.username}.")
+                return True
+            except Exception as Error:
+                logout_attempts += 1
+                logging.info(f"Log-Out Unsuccessful For {self.username}. Attempts Remaining: {logout_attempts}")
+
+        logging.info(f"Log-Out Failed For {self.username}. Quitting Driver.")
+        self.driver.quit()
+        return False
