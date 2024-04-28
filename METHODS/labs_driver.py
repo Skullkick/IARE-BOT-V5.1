@@ -625,3 +625,111 @@ async def get_lab_details(bot,chat_id):
         await tdatabase.store_lab_info(chat_id,subject_index=None,week_index=None,subjects=labs_data,weeks=weeks_data)
     except Exception as e:
         logging.info(msg=f"there is an error storing lab info to the database. the error is {e}")
+
+async def upload_lab_pdf(bot,message):
+    """
+    This Function is used to upload the the pdf to the samvidha by retreiving the required data from the database.
+
+    :param bot: Pyrogram Client.
+    :param message: message sent by the user.
+    
+    :return: None
+    """
+    # chat_id of the user based on the message sent by the user
+    chat_id = message.chat.id
+    message_sent_when_started = await bot.send_message(chat_id,"Initiated retrieval of necessary data for uploading.")
+    # Retreives username and password from the postgres database.
+    get_credentials = await pgdatabase.retrieve_credentials_from_database(chat_id)
+    username, password = get_credentials
+    # starting user session and getting session and url
+    my_lab_upload,url = await user_session(username,password)
+    # Retreiving the Entered title, subject_index, week_index
+    title,subject_index,week_index = await tdatabase.fetch_indexes_and_title_lab_info(chat_id)
+    # Get all subjects from the database
+    subjects_data = await tdatabase.fetch_lab_subjects_from_lab_info(chat_id)
+    # Deserializing the data retreived
+    selected_subject_name = json.loads(subjects_data[0])
+    # Fetching Last date to upload the selected Subject and week
+    last_date_to_upload = my_lab_upload.week_date(subject_index,week_index)
+    # Folder name containg pdfs
+    pdf_folder = "pdfs"
+    # Check Whether the pdf is present or not, If the pdf is present gets the compression status
+    check_present , check_compress = await labs_handler.check_recieved_pdf_file(bot,chat_id)
+    if check_present:
+        # According to the compression status the pdf file is selected to uplaod
+        if check_compress is True:
+            pdf_folder = os.path.join(pdf_folder,f"C-{chat_id}-comp.pdf")
+        else:
+            pdf_folder = os.path.join(pdf_folder,f"C-{chat_id}.pdf")
+    message_text_before_uploading = f"""
+```UPLOAD INITIATED
+⫸ STATUS : UPLOADING
+
+⫸ LAST DATE TO SUBMIT : {last_date_to_upload}
+
+⫸ UPLOAD DETAILS :
+
+Title : {title} 
+
+SUBJECT : {selected_subject_name[subject_index-1]}
+
+WEEK : {f"Week - {week_index+1}"}
+
+```
+"""
+    message_before_start_upload = await bot.edit_message_text(chat_id,message_sent_when_started.id,message_text_before_uploading)
+    # Started uploading the pdf to Samvidha based on all the data given to the function
+    upload_pdf_to_samvidha = my_lab_upload.upload_pdf(
+        url=url, # Url of the lab record
+        filepath=os.path.abspath(pdf_folder), # filepath of the pdf
+        title=title, # title of the subject
+        lab_index=subject_index, # Selected subject index
+        week_index=week_index # Selected week index
+    )
+    STATUS_CODE ,STATUS_MESSAGE, STATUS_SAMVIDHA = upload_pdf_to_samvidha
+    ERROR_STATUS_CODES = [400,401,402,403,404,405,201] # Error codes
+    if STATUS_CODE in ERROR_STATUS_CODES:# Checks if received status code is error or not.
+        UNSUCCESSFULL_UPLOAD_MESSAGE = f"""
+    ```UPLOAD FAILED
+⫸ STATUS : {STATUS_CODE} ERROR
+
+⫸ ERROR : {STATUS_MESSAGE}
+
+⫸ ERROR REASON : {STATUS_SAMVIDHA}
+
+⫸ LAST DATE TO SUBMIT : {last_date_to_upload}
+
+⫸ UPLOAD DETAILS :
+
+● Title : {title} 
+
+● SUBJECT : {selected_subject_name[subject_index-1]}
+
+● WEEK : {f"Week - {week_index+1}"}
+
+    ```
+    """
+        await labs_handler.remove_pdf_file(bot,chat_id) # Removes the Pdf from the pdf folder
+        await tdatabase.delete_indexes_and_title_info(chat_id) # Delete the selected index values
+        await bot.edit_message_text(chat_id,message_before_start_upload.id,UNSUCCESSFULL_UPLOAD_MESSAGE)
+    else:
+        SUCCESSFULL_UPLOAD_MESSAGE = F"""
+    ```UPLOAD SUCCESS
+⫸ STATUS : {STATUS_MESSAGE}
+
+⫸ LAST DATE TO SUBMIT : {last_date_to_upload}
+
+⫸ Upload details :
+
+● Title : {title}
+
+● SUBJECT : {selected_subject_name[subject_index-1]}
+
+● WEEK : {f"Week - {week_index+1}"}
+
+    ``` 
+    """
+        await labs_handler.remove_pdf_file(bot,chat_id)# Removes the Pdf from the pdf folder
+        await tdatabase.delete_indexes_and_title_info(chat_id)# Delete the selected index values
+        await bot.edit_message_text(chat_id,message_before_start_upload.id,SUCCESSFULL_UPLOAD_MESSAGE)
+    await buttons.start_user_buttons(bot,message) # Starts the user buttons.
