@@ -16,42 +16,42 @@ from bs4 import BeautifulSoup
 
 class HeadlessLabUpload:
 
-        def __init__(self, username: str, password: str) -> None:
-            """
-            The constructor initializes the username, password, selenium webdriver, and
-            logging object. All are attributes of the class.
+    def __init__(self, username: str, password: str) -> None:
+        """
+        The constructor initializes the username, password, selenium webdriver, and
+        logging object. All are attributes of the class.
 
-            :param username: The IARE Username.
-            :param password: The Username's Password.
-            """
+        :param username: The IARE Username.
+        :param password: The Username's Password.
+        """
 
-            # Initializing Username And Password.
-            self.username = username
-            self.password = password
+        # Initializing Username And Password.
+        self.username = username
+        self.password = password
 
-            # Initialing Logging Object
-            try:
-                logging.basicConfig(
-                    format="%(asctime)s - %(levelname)s - %(message)s",
-                    filename="logs.log",
-                    filemode="a",
-                    level=logging.INFO
-                )
-            except Exception as LoggingError:
-                print(f"Logging Unavailable For {self.username}, Due To \n{LoggingError}.")
+        # Initialing Logging Object
+        try:
+            logging.basicConfig(
+                format="%(asctime)s - %(levelname)s - %(message)s",
+                filename="logs.log",
+                filemode="a",
+                level=logging.INFO
+            )
+        except Exception as LoggingError:
+            print(f"Logging Unavailable For {self.username}, Due To \n{LoggingError}.")
 
-            # Initialing Driver
-            try:
-                chrome_service_object = Service(executable_path=ChromeDriver().install())
+        # Initialing Driver
+        try:
+            chrome_service_object = Service(executable_path=ChromeDriver().install())
 
-                # Making The Version Headless.
-                chrome_options_object = Options()
-                chrome_options_object.add_argument("--headless")
-                chrome_options_object.add_argument("--disable-gpu")
+            # Making The Version Headless.
+            chrome_options_object = Options()
+            chrome_options_object.add_argument("--headless")
+            chrome_options_object.add_argument("--disable-gpu")
 
-                self.driver = webdriver.Chrome(options=chrome_options_object, service=chrome_service_object)
-            except Exception as DriverError:
-                logging.error(f"Driver Creation Unsuccessful For {self.username}.")
-                exit(1)
-            finally:
-                logging.info(f"Driver Creation Successful For {self.username}.")
+            self.driver = webdriver.Chrome(options=chrome_options_object, service=chrome_service_object)
+        except Exception as DriverError:
+            logging.info(f"Driver Creation Unsuccessful For {self.username}.")
+            exit(1)
+        finally:
+            logging.info(f"Driver Creation Successful For {self.username}.")
