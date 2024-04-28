@@ -249,9 +249,9 @@ async def fetch_lab_subjects_from_lab_info(chat_id):
         cursor = conn.cursor()
         cursor.execute('SELECT subjects FROM lab_upload_info WHERE chat_id = ?', (chat_id,))
         all_labs_subjects = cursor.fetchone()
-        if all_labs_subjects[0] is None:
+        if all_labs_subjects is None:
             return None
-        else:
+        elif all_labs_subjects[0] is not None:
             return all_labs_subjects
 
 async def fetch_lab_weeks_from_lab_info(chat_id):
@@ -263,9 +263,9 @@ async def fetch_lab_weeks_from_lab_info(chat_id):
         cursor = conn.cursor()
         cursor.execute('SELECT weeks FROM lab_upload_info WHERE chat_id = ?', (chat_id,))
         all_lab_weeks = cursor.fetchone()
-        if all_lab_weeks[0] is None:
+        if all_lab_weeks is None:
             return None
-        else:
+        elif all_labs_weeks[0] is not None:
             return all_lab_weeks
 
 async def fetch_indexes_and_title_lab_info(chat_id):
