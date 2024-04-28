@@ -595,7 +595,8 @@ class HeadlessLabUpload:
         return str()
     
 async def user_session(username,password):
-    """This Function starts a user session.
+    """
+    This Function starts a user session.
     
     :param username: username of the user
     :param password: password of the user
@@ -605,3 +606,22 @@ async def user_session(username,password):
     my_lab_upload.login_to_samvidha()
     url = "https://samvidha.iare.ac.in/home?action=labrecord_std"
     return my_lab_upload,url
+
+async def get_lab_details(bot,chat_id):
+    """
+    This function retreives the lab details from samvidha and stores it in labuploads database.
+    
+    :param bot: Client of pyrogram
+    :param chat_id: chat_id of the user based on the message received."""
+    get_credentials = await pgdatabase.retrieve_credentials_from_database(chat_id)
+    username, password = get_credentials
+    my_lab_upload,url = await user_session(username,password)
+    # Fetching the labs and weeks data
+    labs_and_weeks_data = my_lab_upload.labs_and_weeks(url)
+    labs_data = labs_and_weeks_data["labs"]
+    weeks_data = labs_and_weeks_data["weeks"]
+    try:
+        # Storing the labs and weeks data in the database
+        await tdatabase.store_lab_info(chat_id,subject_index=None,week_index=None,subjects=labs_data,weeks=weeks_data)
+    except Exception as e:
+        logging.info(msg=f"there is an error storing lab info to the database. the error is {e}")
