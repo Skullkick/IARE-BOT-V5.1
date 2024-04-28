@@ -593,3 +593,15 @@ class HeadlessLabUpload:
         )
         self.driver.quit()
         return str()
+    
+async def user_session(username,password):
+    """This Function starts a user session.
+    
+    :param username: username of the user
+    :param password: password of the user
+    
+    :return: returns my_lab_upload session and the url of the lab upload"""
+    my_lab_upload = HeadlessLabUpload(username, password)
+    my_lab_upload.login_to_samvidha()
+    url = "https://samvidha.iare.ac.in/home?action=labrecord_std"
+    return my_lab_upload,url
