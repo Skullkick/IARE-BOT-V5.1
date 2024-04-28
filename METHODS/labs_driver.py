@@ -209,3 +209,63 @@ class HeadlessLabUpload:
         self.driver.quit()
         return labs_and_weeks
 
+    def week_date(self, lab_index: int, week_index) -> str:
+        """
+        The function finds the deadline for the given lab_index and week_index according to the
+        previous labs_and_weeks() functions.
+        :param lab_index: The index for the lab according to the
+        :param week_index:
+        :return: str, the deadline for the given lab and week. Empty string in case of errors.
+        """
+        
+        self.driver.get("https://samvidha.iare.ac.in/home?action=labrecord_std")
+        date_attempts = 0
+        date = ""
+        while date_attempts < 5:
+            try:
+                # Waiting For Lab Select Element.
+                lab_select_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "sub_code"))
+                )
+
+                # Creating Select Object For Labs.
+                lab_select = Select(lab_select_element)
+
+                # Passing lab_index To Select Lab.
+                lab_select.select_by_index(lab_index)
+
+                # Waiting For Week Select Element.
+                weeks_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "week_no"))
+                )
+
+                # Creating Select Object For Weeks.
+                week_select = Select(weeks_element)
+
+                # Passing week_index To Select Week.
+                week_select.select_by_index(week_index)
+
+                # Waiting For The Lab Deadline Element.
+                lab_deadline_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "lab_exp_date"))
+                )
+
+                date += lab_deadline_element.text
+                logging.info(f"Date Successfully Found For {self.username}.")
+                return date
+
+            except selenium.common.TimeoutException:
+                date_attempts += 1
+                logging.info(
+                    f"Could Not Find Date For {self.username}. Attempts Remaining: {date_attempts}."
+                )
+
+            except Exception as DateError:
+                date_attempts += 1
+                logging.info(
+                    f"Could Not Find Date For {self.username}, Due To {DateError}. Attempts Remaining: {date_attempts}."
+                )
+
+        logging.info(f"Could Not Find Date For {self.username}. Quitting Driver.")
+        return date
+
