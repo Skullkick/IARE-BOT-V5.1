@@ -121,3 +121,35 @@ class HeadlessLabUpload:
         logging.info(f"Log-In Unsuccessful For {self.username}.")
         self.driver.quit()
         return False
+    
+    def find_lab_upload_url(self):
+        """
+        This is a simple function that tries 5 times to find lab_upload URL.
+        This function can be called only if login_to_samvidha() is successful.
+        
+        :return: URL: str, that can be used to get to the lab upload page for that user.
+        """
+        lab_attempts = 0
+        while lab_attempts < 5:
+            try:
+                # Finding the lab_record element
+                lab_record_element = self.driver.find_element(by=By.CSS_SELECTOR, value="[title='Lab Record']")
+
+                # Finding URL
+                lab_record_url = lab_record_element.get_attribute("href")
+
+                # Verifying Lab URL.
+                if lab_record_url:
+                    logging.info(msg=f"Lab Record URL Successfully Found For {self.username}.")
+                    return lab_record_url
+
+            # Catching Lab Element Errors And Logging.
+            except selenium.common.NoSuchElementException:
+                lab_attempts += 1
+                logging.info(
+                    msg=f"Could Not Find Lab Upload URL For {self.username}. Attempts Remaining: {lab_attempts}.")
+                time.sleep(2)
+
+        # Quitting Driver For Failure To Find Lab Upload URL.
+        logging.info(msg=f"Could Not Find Lab Upload URL For {self.username}. Attempts Expired. Quitting Driver.")
+        self.driver.quit()
