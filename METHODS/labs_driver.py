@@ -62,3 +62,62 @@ class HeadlessLabUpload:
             exit(1)
         finally:
             logging.info(f"Driver Creation Successful For {self.username}.")
+
+
+    def login_to_samvidha(self):
+        """
+        The function uses the above initialized driver to log in to samvidha. It also returns
+        a boolean that represents the same.
+
+        It is utilizing the new WebDriverWait.
+        :return: True for successful login, else False.
+        """
+
+        login_attempts = 0
+        while login_attempts < 5:
+            try:
+                self.driver.get("https://samvidha.iare.ac.in/")
+
+                # Waiting For Username Element To Pass Keys.
+                username_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "txt_uname"))
+                )
+
+                username_element.send_keys(self.username)
+
+                # Waiting For Password Element To Pass Keys.
+                password_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "txt_pwd"))
+                )
+
+                password_element.send_keys(self.password)
+
+                # Waiting For Sign-In Button To Click.
+                sign_in_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.ID, "but_submit"))
+                )
+
+                sign_in_element.click()
+
+                # Waiting For Verification Element To Return Boolean.
+                verification_element = WebDriverWait(self.driver, timeout=2).until(
+                    ExpecCond.presence_of_element_located((By.CLASS_NAME, "hidden-xs"))
+                )
+
+                if "IARE - Dashboard - Student" in self.driver.page_source:
+                    if verification_element.text:
+                        logging.info(f"Log-In Successful For {self.username}.")
+                        return True
+
+            except selenium.common.TimeoutException:
+                login_attempts += 1
+                logging.info(f"Log-In Failed For {self.username}. Attempts Remaining: {login_attempts}.")
+
+            except Exception as LoginErrors:
+                login_attempts += 1
+                logging.info(
+                    f"Log-In Failed For {self.username}, Due To {LoginErrors}. Attempts Remaining: {login_attempts}.")
+
+        logging.info(f"Log-In Unsuccessful For {self.username}.")
+        self.driver.quit()
+        return False
