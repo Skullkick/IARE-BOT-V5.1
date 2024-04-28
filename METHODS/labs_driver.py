@@ -549,3 +549,47 @@ class HeadlessLabUpload:
         self.driver.quit()
         return upload_data
     
+    def find_title(self, week: int) -> str:
+        """
+        The function finds the title for a particular week, for particular lab.
+        The week must be passed, but the lab must be passed to select_and_click().
+        :return: The title for the week, for the lab, If found, else empty string.
+        """
+        view_upload_attempts = 0
+        while view_upload_attempts < 5:
+            try:
+                # Finding The Upload Table.
+                source = self.driver.page_source
+
+                # Creating Soup Object.
+                soup = BeautifulSoup(source, features="html.parser")
+
+                # Finding All Tables.
+                table = soup.find_all("table")[0]
+
+                # Finding All The Rows.
+                rows = table.find("tbody").find_all("tr")
+
+                for row in rows[1:]:
+                    extracted_week = row.find("td")
+                    if int(extracted_week.text.removeprefix("Week-")) == week:
+                        extracted_title = row.find_all("td")[2]
+                        logging.info(f"Title Found For {self.username}.")
+                        return extracted_title.text
+
+                logging.info(
+                    f"The Title Has Not Been Found For {self.username}. Attempts Remaining: {view_upload_attempts - 5}"
+                )
+                view_upload_attempts += 1
+
+            except Exception as TitleError:
+                logging.info(
+                    msg=f"Title Has Not Been Found For Given Week Number For {self.username}, Due To {TitleError}"
+                )
+                view_upload_attempts += 1
+
+        logging.info(
+            msg=f"Could Not Find Title For {self.username}. Quitting Driver."
+        )
+        self.driver.quit()
+        return str()
