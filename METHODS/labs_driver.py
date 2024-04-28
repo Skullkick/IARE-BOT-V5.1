@@ -475,3 +475,77 @@ class HeadlessLabUpload:
         self.driver.quit()
         return False
 
+    def displaying_lab_data(self) -> dict:
+        """
+        The function displays all the details of uploaded lab sheets, like Academic
+        Year, Subject Code, Experiment Title, Week Number, Marks, And Link To The
+        PDF Uploaded. This function must be called only after select_and_click() returns True.
+
+        :return: dict of dicts, containing all these values under an index as key, and these
+        details as values, empty dict in case of errors.
+        """
+        upload_data = dict()
+        display_data_attempts = 0
+        while display_data_attempts < 5:
+            try:
+                # Getting The Page Source.
+                page_source = self.driver.page_source
+
+                # Creating Soup Object And Passing The Source.
+                soup = BeautifulSoup(page_source, "html.parser")
+                view_upload_table = soup.find(id="example2")
+
+                # Finding The Table-Body, And Hence The Rows.
+                table_body_element = view_upload_table.find(id="result")
+                rows = table_body_element.find_all("tr")
+
+                # Filling Up The Dictionary.
+                index = 0
+                for row in rows:
+                    # Finding All The Rows In The Table.
+                    table_data = row.find_all("td")[1:]
+
+                    # Creating Data Dictionary.
+                    data = dict()
+
+                    # Adding All The Details, Except Link
+                    data["Academic Year"] = table_data[0].text
+                    data["Course Code"] = table_data[1].text
+                    data["Title"] = table_data[2].text
+                    data["Week Number"] = table_data[3].text
+                    data["Marks"] = table_data[4].text
+
+                    # Finding PDF Link.
+                    anchor = table_data[6].find("a")
+                    link = anchor["href"]
+                    data["Link To PDF"] = link
+
+                    # Adding Data To Upload Data.
+                    upload_data[index] = data
+
+                    # Incrementing Index.
+                    index += 1
+
+                logging.info(msg=f"Successfully Found Upload Details For {self.username}.")
+                return upload_data
+
+            except selenium.common.TimeoutException:
+                display_data_attempts += 1
+                logging.info(
+                    msg=f"""
+                    Failed To Find Upload Data For {self.username}. Attempts Remaining: {5 - display_data_attempts}.
+                        """
+                )
+
+            except Exception as UploadDataError:
+                display_data_attempts += 1
+                logging.info(
+                    msg=f"""
+                    Failed To Find Upload Data For {self.username}, Due To {UploadDataError}
+                    Attempts Remaining: {5 - display_data_attempts}.
+                """)
+
+        logging.info(msg=f"Failed For Find Lab Upload Data For {self.username}. Quitting Driver")
+        self.driver.quit()
+        return upload_data
+    
