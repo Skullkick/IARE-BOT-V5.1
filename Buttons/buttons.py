@@ -301,13 +301,13 @@ async def callback_function(bot,callback_query):
         await callback_query.answer()
         _message = callback_query.message
         chat_id = _message.chat.id
-        await tdatabase.delete_pdf_status_info(chat_id)
+        await tdatabase.delete_lab_upload_data(chat_id) # Deletes the saved Subjects and weeks from database
         await pgdatabase.remove_saved_credentials(bot,chat_id)
 
     elif callback_query.data == "remove_logout_saved_cred":        
         _message = callback_query.message
         chat_id = _message.chat.id
-        await tdatabase.delete_pdf_status_info(chat_id)
+        await tdatabase.delete_lab_upload_data(chat_id)# Deletes the saved Subjects and weeks from database
         await pgdatabase.remove_saved_credentials(bot,chat_id)
         await operations.logout_user_and_remove(bot,_message)
         await callback_query.answer()
