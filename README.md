@@ -42,7 +42,7 @@ Telegram Bot which scrapes the data from the [SAMVIDHA](https://samvidha.iare.ac
 
 -    '/logout' - Log out from the current session.
 
--    '/request {your request}' - Send a request to the bot developer.
+-    /report {your report} - Send a report to the bot developer.
 
 -    Note: Replace {username}, {password}, and {your request} with actual values.
    
