@@ -265,6 +265,7 @@ async def attendance(bot,message):
     if not session_data:
         if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
             # Login message if no user found in database based on chat_id
+            # LOGIN MESSAGE     
             login_message = f"""
 ```NO USER FOUND
 ⫸ How To Login:
@@ -502,8 +503,11 @@ async def bunk(bot,message):
     
             await bot.send_message(chat_id,login_message)
             return
-
+      
     session_data = await tdatabase.load_user_session(chat_id)
+            
+        else:
+            session_data = await tdatabase.load_user_session(chat_id)
 
     attendance_url = 'https://samvidha.iare.ac.in/home?action=stud_att_STD'
     
@@ -623,6 +627,23 @@ async def check_pat_student(bot,message):
         if await auto_login_by_database(bot,message,chat_id) is False and chat_id_in_pgdatabase is False:
             return
     session_data = await tdatabase.load_user_session(chat_id)
+            login_message = f"""
+```NO USER FOUND
+⫸ How To Login:
+
+/login rollnumber password
+
+⫸ Example:
+
+/login 22951A0000 iare_unoffical_bot
+
+``` 
+"""
+
+            await bot.send_message(chat_id,login_message)
+            return
+        else:
+            session_data = await tdatabase.load_user_session(chat_id)
     pat_attendance_url = "https://samvidha.iare.ac.in/home?action=Attendance_std"
     with requests.Session() as s:
         cookies = session_data['cookies']
@@ -666,7 +687,12 @@ async def pat_attendance(bot,message):
     
             await bot.send_message(chat_id,login_message)
             return
+
     session_data = await tdatabase.load_user_session(chat_id)
+
+        else:
+            session_data = await tdatabase.load_user_session(chat_id)
+
     pat_attendance_url = "https://samvidha.iare.ac.in/home?action=Attendance_std"
     with requests.Session() as s:
         cookies = session_data['cookies']
